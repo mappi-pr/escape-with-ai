@@ -10,16 +10,6 @@ let lastSeq = 0;
 let pollTimer = null;
 let prevNotes = {};
 
-$("mcp-url-copy").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText($("mcp-url").value);
-    $("mcp-url-copy").textContent = "コピーしました";
-    setTimeout(() => ($("mcp-url-copy").textContent = "URLをコピー"), 2500);
-  } catch {
-    $("mcp-url").select();
-  }
-});
-
 function setStep(n, mode) {
   // mode: "active" | "locked" | "done"
   const el = $(`step${n}`);
@@ -41,8 +31,6 @@ $("join-form").addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error("create failed");
     const data = await res.json();
     sessionId = data.sessionId;
-    $("mcp-url").value = data.mcpUrl;
-    $("mcp-url-copy").disabled = false;
     $("prompt-text").value = data.joinPrompt;
     $("copy-btn").disabled = false;
     $("go-room-btn").disabled = false;

@@ -31,18 +31,12 @@
         <span class="step-num">2</span>
         <div class="step-body">
           <h2>プロンプトをコピーして、あなたのAIに貼る</h2>
-          <p class="note">接続方法はAIが自分で選ぶので、選ぶ必要はありません。アプリ版AI（Claude・ChatGPTなど）でコネクタ登録が必要な場合は、AIがこのURLの登録を頼んできます。登録は一度だけで、次回からはプロンプトを貼るだけで遊べます。</p>
-          <div id="mcp-box">
-            <div class="row">
-              <input id="mcp-url" type="text" readonly placeholder="部屋を作るとURLが発行されます">
-              <button id="mcp-url-copy" type="button" disabled>URLをコピー</button>
-            </div>
-          </div>
+          <p class="note">接続方法はAIが自分で選ぶので、選ぶ必要はありません。</p>
           <textarea id="prompt-text" rows="10" readonly placeholder="まず「部屋を作る」を押してください"></textarea>
           <div class="row">
             <button id="copy-btn" type="button" disabled>プロンプトをコピー</button>
           </div>
-          <p class="note">※ プロンプトやURLが参加キーです。他の人に共有しないでください。</p>
+          <p class="note">※ このプロンプトが参加キーです。他の人に共有しないでください。</p>
         </div>
       </li>
       <li id="step3" class="step locked">
