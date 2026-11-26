@@ -3,6 +3,8 @@
 // 部屋：ステージ上のスポットをタップして調べる。状態とイベントはポーリング（1.5秒）で反映。
 // キーワードはタップで「ゲームのヒント：○○」をコピーできる。
 
+const $ = (id) => document.getElementById(id);
+
 let sessionId = null;
 let lastSeq = 0;
 let pollTimer = null;
@@ -17,8 +19,6 @@ $("mcp-url-copy").addEventListener("click", async () => {
     $("mcp-url").select();
   }
 });
-
-const $ = (id) => document.getElementById(id);
 
 function setStep(n, mode) {
   // mode: "active" | "locked" | "done"
