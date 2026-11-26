@@ -16,7 +16,8 @@ import {
   describeStateForAI,
   HINTS,
 } from "./room.mjs";
-import { buildJoinPrompt, buildRejoinPrompt } from "./prompt.mjs";
+import { buildJoinPrompt, buildRejoinPrompt, buildMcpPrompt } from "./prompt.mjs";
+import { handleMcp } from "./mcp.mjs";
 
 const PORT = process.env.PORT ?? 8787;
 const PUBLIC_DIR = fileURLToPath(new URL("../public/", import.meta.url));
@@ -118,8 +119,11 @@ const server = createServer(async (req, res) => {
     const body = await readJson(req);
     const name = String(body.name ?? "").trim() || "プレイヤー";
     const s = newSession(name);
-    const joinPrompt = buildJoinPrompt({ baseUrl: publicBase(req), sessionId: s.id, name });
-    return sendJson(res, 201, { sessionId: s.id, name, joinPrompt });
+    const baseUrl = publicBase(req);
+    const joinPrompt = buildJoinPrompt({ baseUrl, sessionId: s.id, name });
+    const mcpUrl = `${baseUrl}/mcp/${s.id}`;
+    const mcpPrompt = buildMcpPrompt({ name });
+    return sendJson(res, 201, { sessionId: s.id, name, joinPrompt, mcpUrl, mcpPrompt });
   }
 
   const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
@@ -164,6 +168,34 @@ const server = createServer(async (req, res) => {
     }
 
     return sendJson(res, 404, { error: "unknown endpoint" });
+  }
+
+  // --- MCP（アプリ版 AI のカスタムコネクタ用） ---
+  const mcpMatch = path.match(/^\/mcp\/([a-f0-9]+)$/);
+  if (mcpMatch && req.method === "POST") {
+    const s = sessions.get(mcpMatch[1]);
+    const body = await readJson(req);
+    const ops = {
+      brief: async () => (s ? aiBrief(s) : null),
+      events: async (since) =>
+        s
+          ? s.events
+              .filter((e) => e.seq > since)
+              .map((e) => `#${e.seq} [${e.kind}] ${e.text}`)
+              .join("\n") || "（新しい出来事はない）"
+          : null,
+      postMessage: async (text) => {
+        if (!s) return false;
+        pushEvent(s, "ai", text);
+        return true;
+      },
+    };
+    const { status, payload } = await handleMcp(body, ops);
+    if (payload === null) {
+      res.writeHead(status);
+      return res.end();
+    }
+    return sendJson(res, status, payload);
   }
 
   // --- 静的ファイル ---

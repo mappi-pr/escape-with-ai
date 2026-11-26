@@ -8,7 +8,9 @@
 ## 遊び方（設計）
 
 1. 参加画面で名前を入力すると、セッションが発行され、AI 招待プロンプトが表示される
-2. プロンプトを自分の AI に貼ると、AI が curl でセッションに参加し、部屋に挨拶を残す
+2. プロンプトを自分の AI に貼ると、AI がセッションに参加し、部屋に挨拶を残す。参加方式は2つ：
+   - **エージェント型（curl）**：シェルや HTTP を実行できる AI が、curl で API を叩く
+   - **アプリ版AI（MCP）**：Claude / ChatGPT 等のアプリ版 AI は、設定でカスタムコネクタ（MCP サーバー）として `https://<公開URL>/mcp/<セッションID>` を追加すると、ツール（get_brief / get_events / post_message）で参加できる
 3. 人は画面をぽちぽち調べて謎を解く
 4. 詰まったら、画面に出ているキーワードを合言葉で AI に聞く：**「ゲームのヒント：○○」**
    - 合言葉の形にすることで、ふだんの会話や他の質問と競合しない
@@ -51,6 +53,8 @@ Workers + Durable Objects で動かす。セッション1つ = Durable Object 1�
 | POST | `/api/sessions/:id/action` `{spot, code?}` | 人のクリック（部屋を調べる） |
 | GET | `/api/sessions/:id/ai/brief` | AI 用：状態の文章化＋ヒント集＋最近の出来事 |
 | POST | `/api/sessions/:id/ai/message` `{text}` | AI が部屋にメッセージを残す |
+| GET | `/api/sessions/:id/rejoin-prompt` | 接続が切れた AI の再参加プロンプト |
+| POST | `/mcp/:id` | MCP（JSON-RPC）。ツール：get_brief / get_events / post_message |
 
 セッション ID（12桁 hex）そのものが参加キー。現状はインメモリで、再起動すると消える。
 

@@ -30,12 +30,23 @@
         <span class="step-num">2</span>
         <div class="step-body">
           <h2>プロンプトをコピーして、あなたのAIに貼る</h2>
-          <p class="note">AIがセッションに参加して、部屋に挨拶を残します。</p>
+          <p class="note">AIの種類に合わせて、参加方式を選んでください。</p>
+          <div class="mode-tabs">
+            <button id="mode-curl" type="button" class="tab active">エージェント型（curl）</button>
+            <button id="mode-mcp" type="button" class="tab">アプリ版AI（MCP）</button>
+          </div>
+          <div id="mcp-box" hidden>
+            <p class="note">まず、AIアプリの設定で「カスタムコネクタ（MCP）」にこのURLを追加してください。そのあと、下のプロンプトをAIに貼ります。</p>
+            <div class="row">
+              <input id="mcp-url" type="text" readonly placeholder="部屋を作るとURLが発行されます">
+              <button id="mcp-url-copy" type="button" disabled>URLをコピー</button>
+            </div>
+          </div>
           <textarea id="prompt-text" rows="10" readonly placeholder="まず「部屋を作る」を押してください"></textarea>
           <div class="row">
             <button id="copy-btn" type="button" disabled>プロンプトをコピー</button>
           </div>
-          <p class="note">※ プロンプト内のURLが参加キーです。他の人に共有しないでください。</p>
+          <p class="note">※ プロンプトやURLが参加キーです。他の人に共有しないでください。</p>
         </div>
       </li>
       <li id="step3" class="step locked">

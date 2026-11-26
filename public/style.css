@@ -82,6 +82,11 @@ textarea {
 .step.done .step-num { background: var(--accent); color: #10222e; }
 .step-body { flex: 1; min-width: 0; }
 
+.mode-tabs { display: flex; gap: 8px; margin: 8px 0 12px; }
+.mode-tabs .tab { flex: 1; padding: 8px; font-size: 0.9rem; }
+.mode-tabs .tab.active { border-color: var(--accent); color: var(--accent); font-weight: bold; }
+#mcp-box { margin-bottom: 10px; }
+
 /* 部屋ステージ */
 .room-head .goal { color: var(--accent); margin: 0 0 4px; }
 .room-head p { color: var(--muted); margin: 0; }

@@ -12,7 +12,8 @@ import {
   describeStateForAI,
   HINTS,
 } from "../server/room.mjs";
-import { buildJoinPrompt, buildRejoinPrompt } from "../server/prompt.mjs";
+import { buildJoinPrompt, buildRejoinPrompt, buildMcpPrompt } from "../server/prompt.mjs";
+import { handleMcp } from "../server/mcp.mjs";
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj, null, 2), {
@@ -161,7 +162,9 @@ export default {
       });
       if (!initRes.ok) return json({ error: "failed to create session" }, 500);
       const joinPrompt = buildJoinPrompt({ baseUrl: url.origin, sessionId: id, name });
-      return json({ sessionId: id, name, joinPrompt }, 201);
+      const mcpUrl = `${url.origin}/mcp/${id}`;
+      const mcpPrompt = buildMcpPrompt({ name });
+      return json({ sessionId: id, name, joinPrompt, mcpUrl, mcpPrompt }, 201);
     }
 
     const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
@@ -180,6 +183,39 @@ export default {
       const sub = m[2] ?? "/";
       const forward = new Request(`https://session${sub}${url.search}`, req);
       return stub.fetch(forward);
+    }
+
+    // MCP（アプリ版 AI のカスタムコネクタ用）。操作は DO の既存エンドポイント経由。
+    const mcpMatch = path.match(/^\/mcp\/([a-f0-9]+)$/);
+    if (mcpMatch && req.method === "POST") {
+      const stub = env.SESSION.getByName(mcpMatch[1]);
+      const ops = {
+        brief: async () => {
+          const r = await stub.fetch("https://session/ai/brief");
+          return r.ok ? r.text() : null;
+        },
+        events: async (since) => {
+          const r = await stub.fetch(`https://session/events?since=${since}`);
+          if (!r.ok) return null;
+          const d = await r.json();
+          return (
+            d.events.map((e) => `#${e.seq} [${e.kind}] ${e.text}`).join("\n") ||
+            "（新しい出来事はない）"
+          );
+        },
+        postMessage: async (text) => {
+          const r = await stub.fetch("https://session/ai/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+          return r.ok;
+        },
+      };
+      const body = await req.json().catch(() => null);
+      const { status, payload } = await handleMcp(body, ops);
+      if (payload === null) return new Response(null, { status });
+      return json(payload, status);
     }
 
     if (path.startsWith("/api/")) return json({ error: "not found" }, 404);
