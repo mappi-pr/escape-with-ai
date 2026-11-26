@@ -17,7 +17,7 @@
 
 通信は会話のターンに合わせたポーリング（GUI 1.5秒間隔）。即時性が要る場面が出てきたら SSE / WebSocket へ移行する。
 
-## 起動
+## 起動（ローカル・Node 版）
 
 ```sh
 npm start
@@ -25,6 +25,21 @@ npm start
 ```
 
 外部公開時は `PUBLIC_BASE_URL` に公開 URL を設定すると、招待プロンプト内の URL がそちらになる。
+
+## Cloudflare へ置く（本番）
+
+Workers + Durable Objects で動かす。セッション1つ = Durable Object 1個で、状態は DO ストレージに保存される。
+
+- `worker/worker.mjs` — Worker 本体＋ Session Durable Object（部屋ロジックは `server/room.mjs` を共用）
+- `wrangler.toml` — 静的アセットは `public/`、`/api/*` は Worker 先行
+
+デプロイ手順（GitHub 連携）:
+
+1. Cloudflare ダッシュボード → Workers & Pages → Create → Workers → Import a repository でこのリポジトリを選ぶ
+2. Deploy command は `npx wrangler deploy`（wrangler.toml がそのまま使われる）
+3. デプロイ後、表示された URL（`https://escape-with-ai.<サブドメイン>.workers.dev` など）で参加画面が開く
+
+手元確認は `npx wrangler dev --local` で全フロー動作確認済み（2026-11-26）。
 
 ## API
 
