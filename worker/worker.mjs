@@ -12,7 +12,7 @@ import {
   describeStateForAI,
   HINTS,
 } from "../server/room.mjs";
-import { buildJoinPrompt, buildRejoinPrompt, buildMcpPrompt } from "../server/prompt.mjs";
+import { buildJoinPrompt, buildRejoinPrompt } from "../server/prompt.mjs";
 import { handleMcp } from "../server/mcp.mjs";
 
 function json(obj, status = 200) {
@@ -161,10 +161,9 @@ export default {
         body: JSON.stringify({ id, name }),
       });
       if (!initRes.ok) return json({ error: "failed to create session" }, 500);
-      const joinPrompt = buildJoinPrompt({ baseUrl: url.origin, sessionId: id, name });
       const mcpUrl = `${url.origin}/mcp/${id}`;
-      const mcpPrompt = buildMcpPrompt({ name });
-      return json({ sessionId: id, name, joinPrompt, mcpUrl, mcpPrompt }, 201);
+      const joinPrompt = buildJoinPrompt({ baseUrl: url.origin, sessionId: id, name, mcpUrl });
+      return json({ sessionId: id, name, joinPrompt, mcpUrl }, 201);
     }
 
     const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
@@ -176,7 +175,12 @@ export default {
         const stateRes = await stub.fetch("https://session/state");
         if (!stateRes.ok) return json({ error: "session not found" }, 404);
         const st = await stateRes.json();
-        const prompt = buildRejoinPrompt({ baseUrl: url.origin, sessionId: m[1], name: st.name });
+        const prompt = buildRejoinPrompt({
+          baseUrl: url.origin,
+          sessionId: m[1],
+          name: st.name,
+          mcpUrl: `${url.origin}/mcp/${m[1]}`,
+        });
         return json({ prompt });
       }
       const stub = env.SESSION.getByName(m[1]);

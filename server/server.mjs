@@ -16,7 +16,7 @@ import {
   describeStateForAI,
   HINTS,
 } from "./room.mjs";
-import { buildJoinPrompt, buildRejoinPrompt, buildMcpPrompt } from "./prompt.mjs";
+import { buildJoinPrompt, buildRejoinPrompt } from "./prompt.mjs";
 import { handleMcp } from "./mcp.mjs";
 
 const PORT = process.env.PORT ?? 8787;
@@ -120,10 +120,9 @@ const server = createServer(async (req, res) => {
     const name = String(body.name ?? "").trim() || "プレイヤー";
     const s = newSession(name);
     const baseUrl = publicBase(req);
-    const joinPrompt = buildJoinPrompt({ baseUrl, sessionId: s.id, name });
     const mcpUrl = `${baseUrl}/mcp/${s.id}`;
-    const mcpPrompt = buildMcpPrompt({ name });
-    return sendJson(res, 201, { sessionId: s.id, name, joinPrompt, mcpUrl, mcpPrompt });
+    const joinPrompt = buildJoinPrompt({ baseUrl, sessionId: s.id, name, mcpUrl });
+    return sendJson(res, 201, { sessionId: s.id, name, joinPrompt, mcpUrl });
   }
 
   const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
@@ -135,7 +134,13 @@ const server = createServer(async (req, res) => {
     if (sub === "/state" && req.method === "GET") return sendJson(res, 200, guiState(s));
 
     if (sub === "/rejoin-prompt" && req.method === "GET") {
-      const prompt = buildRejoinPrompt({ baseUrl: publicBase(req), sessionId: s.id, name: s.name });
+      const baseUrl = publicBase(req);
+      const prompt = buildRejoinPrompt({
+        baseUrl,
+        sessionId: s.id,
+        name: s.name,
+        mcpUrl: `${baseUrl}/mcp/${s.id}`,
+      });
       return sendJson(res, 200, { prompt });
     }
 

@@ -7,21 +7,6 @@ let sessionId = null;
 let lastSeq = 0;
 let pollTimer = null;
 let prevNotes = {};
-let prompts = { curl: "", mcp: "" };
-let currentMode = "curl";
-
-function setMode(mode) {
-  currentMode = mode;
-  $("mode-curl").classList.toggle("active", mode === "curl");
-  $("mode-mcp").classList.toggle("active", mode === "mcp");
-  $("mcp-box").hidden = mode !== "mcp";
-  if (sessionId) {
-    $("prompt-text").value = mode === "curl" ? prompts.curl : prompts.mcp;
-  }
-}
-
-$("mode-curl").addEventListener("click", () => setMode("curl"));
-$("mode-mcp").addEventListener("click", () => setMode("mcp"));
 
 $("mcp-url-copy").addEventListener("click", async () => {
   try {
@@ -53,10 +38,9 @@ $("join-form").addEventListener("submit", async (e) => {
   });
   const data = await res.json();
   sessionId = data.sessionId;
-  prompts = { curl: data.joinPrompt, mcp: data.mcpPrompt };
   $("mcp-url").value = data.mcpUrl;
   $("mcp-url-copy").disabled = false;
-  $("prompt-text").value = currentMode === "curl" ? prompts.curl : prompts.mcp;
+  $("prompt-text").value = data.joinPrompt;
   $("copy-btn").disabled = false;
   $("go-room-btn").disabled = false;
   setStep(1, "done");

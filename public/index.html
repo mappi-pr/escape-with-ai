@@ -30,13 +30,8 @@
         <span class="step-num">2</span>
         <div class="step-body">
           <h2>プロンプトをコピーして、あなたのAIに貼る</h2>
-          <p class="note">AIの種類に合わせて、参加方式を選んでください。</p>
-          <div class="mode-tabs">
-            <button id="mode-curl" type="button" class="tab active">エージェント型（curl）</button>
-            <button id="mode-mcp" type="button" class="tab">アプリ版AI（MCP）</button>
-          </div>
-          <div id="mcp-box" hidden>
-            <p class="note">まず、AIアプリの設定で「カスタムコネクタ（MCP）」にこのURLを追加してください。そのあと、下のプロンプトをAIに貼ります。</p>
+          <p class="note">接続方法はAIが自分で選ぶので、選ぶ必要はありません。アプリ版AI（Claude・ChatGPTなど）でコネクタ登録が必要な場合は、AIがこのURLの登録を頼んできます（先に登録しておいても大丈夫です）。</p>
+          <div id="mcp-box">
             <div class="row">
               <input id="mcp-url" type="text" readonly placeholder="部屋を作るとURLが発行されます">
               <button id="mcp-url-copy" type="button" disabled>URLをコピー</button>
