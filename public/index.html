@@ -13,53 +13,61 @@
     <h1>escape-with-ai</h1>
     <p class="lead">自分のAIと一緒に解く脱出ゲーム。<br>あなたは画面で部屋を調べ、AIはヒントと相談の相方です。</p>
 
-    <form id="join-form">
-      <label for="name-input">あなたの名前</label>
-      <div class="row">
-        <input id="name-input" type="text" placeholder="名前を入力" autocomplete="off" required>
-        <button type="submit">部屋に入る</button>
-      </div>
-    </form>
-
-    <div id="prompt-box" hidden>
-      <h2>AIを招待しよう</h2>
-      <p>下のプロンプトをコピーして、あなたのAIに貼ってください。AIがセッションに参加します。</p>
-      <textarea id="prompt-text" rows="14" readonly></textarea>
-      <div class="row">
-        <button id="copy-btn" type="button">プロンプトをコピー</button>
-        <button id="go-room-btn" type="button">ゲーム画面へ</button>
-      </div>
-      <p class="note">※ プロンプト内のURLが参加キーです。他の人に共有しないでください。</p>
-    </div>
+    <ol class="steps">
+      <li id="step1" class="step active">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <h2>名前を入れて、部屋を作る</h2>
+          <form id="join-form">
+            <div class="row">
+              <input id="name-input" type="text" placeholder="あなたの名前" autocomplete="off" required>
+              <button type="submit" class="primary">部屋を作る</button>
+            </div>
+          </form>
+        </div>
+      </li>
+      <li id="step2" class="step locked">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <h2>プロンプトをコピーして、あなたのAIに貼る</h2>
+          <p class="note">AIがセッションに参加して、部屋に挨拶を残します。</p>
+          <textarea id="prompt-text" rows="10" readonly placeholder="まず「部屋を作る」を押してください"></textarea>
+          <div class="row">
+            <button id="copy-btn" type="button" disabled>プロンプトをコピー</button>
+          </div>
+          <p class="note">※ プロンプト内のURLが参加キーです。他の人に共有しないでください。</p>
+        </div>
+      </li>
+      <li id="step3" class="step locked">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <h2>ゲームをはじめる</h2>
+          <button id="go-room-btn" type="button" class="primary big" disabled>ゲーム画面へ</button>
+        </div>
+      </li>
+    </ol>
   </section>
 
   <!-- 謎解き・脱出画面 -->
   <section id="view-room" hidden>
     <header class="room-head">
       <h1>閉ざされた部屋</h1>
+      <p class="goal">目的：ドアを開けて脱出すること。気になるところをタップして調べよう。</p>
       <p id="player-line"></p>
     </header>
 
     <div id="escaped-banner" hidden>脱出成功！ おつかれさまでした。</div>
 
-    <div class="room-grid" id="spots"></div>
+    <div class="stage" id="spots" aria-label="部屋"></div>
 
-    <form id="safe-form" hidden>
-      <label for="safe-code">金庫の暗証番号（4桁）</label>
-      <div class="row">
-        <input id="safe-code" type="text" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
-        <button type="submit">開ける</button>
-      </div>
-    </form>
-
-    <div class="panel">
-      <h2>持ち物</h2>
-      <p id="inventory">（なし）</p>
+    <div class="inventory-bar">
+      <span class="inv-label">持ち物</span>
+      <span id="inventory">（なし）</span>
     </div>
 
     <div class="panel">
       <h2>AIに聞いてみよう</h2>
-      <p class="note">詰まったら、あなたのAIに合言葉で聞いてみてください。</p>
+      <p class="note">詰まったら、合言葉をタップしてコピーし、あなたのAIに貼って聞いてみてください。</p>
       <ul id="keywords" class="keywords"></ul>
     </div>
 
@@ -69,6 +77,23 @@
     </div>
   </section>
 </main>
+
+<!-- 金庫ダイアログ -->
+<div id="safe-dialog" class="overlay" hidden>
+  <div class="dialog">
+    <h2>金庫</h2>
+    <p class="note">4桁の暗証番号を入力してください。</p>
+    <form id="safe-form">
+      <div class="row">
+        <input id="safe-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" autocomplete="off">
+        <button type="submit" class="primary">開ける</button>
+      </div>
+    </form>
+    <p id="safe-message" class="safe-message"></p>
+    <button id="safe-close" type="button">閉じる</button>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

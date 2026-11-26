@@ -7,6 +7,8 @@
   --accent: #7ec8e3;
   --ai: #ffd98a;
   --border: #343b4d;
+  --wall: #232838;
+  --floor: #1a1e29;
 }
 * { box-sizing: border-box; }
 body {
@@ -23,23 +25,28 @@ h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .row { display: flex; gap: 8px; }
 input[type="text"] {
   flex: 1;
-  padding: 10px 12px;
+  padding: 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
   font-size: 1rem;
+  min-width: 0;
 }
 button {
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel2);
   color: var(--text);
   font-size: 1rem;
   cursor: pointer;
+  touch-action: manipulation;
 }
 button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: #2b4a63; border-color: var(--accent); font-weight: bold; }
+button.big { width: 100%; padding: 16px; font-size: 1.1rem; }
 textarea {
   width: 100%;
   padding: 12px;
@@ -51,7 +58,32 @@ textarea {
   font-size: 0.85rem;
 }
 .note { color: var(--muted); font-size: 0.85rem; }
-#prompt-box { margin-top: 28px; }
+
+/* 参加ステップ */
+.steps { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 14px; }
+.step {
+  display: flex; gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.step.locked { opacity: 0.55; }
+.step-num {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--panel2);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold;
+}
+.step.done .step-num { background: var(--accent); color: #10222e; }
+.step-body { flex: 1; min-width: 0; }
+
+/* 部屋ステージ */
+.room-head .goal { color: var(--accent); margin: 0 0 4px; }
 .room-head p { color: var(--muted); margin: 0; }
 #escaped-banner {
   margin: 16px 0;
@@ -61,21 +93,62 @@ textarea {
   text-align: center;
   font-weight: bold;
 }
-.room-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-  margin: 16px 0;
+.stage {
+  position: relative;
+  margin: 16px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(var(--wall) 0 68%, var(--floor) 68% 100%);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
 }
 .spot {
-  text-align: left;
-  padding: 14px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 27%;
+  padding: 10px 8px;
   border-radius: 10px;
+  background: rgba(38, 43, 56, 0.95);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.spot:active { border-color: var(--accent); }
+.spot .spot-label { display: block; font-weight: bold; font-size: 0.98rem; }
+.spot .spot-note { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+.spot .badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+}
+.spot .badge.done { border-color: #7bc47f; color: #7bc47f; }
+.spot.door { height: 62%; display: flex; flex-direction: column; justify-content: center; }
+.spot.flash { animation: flash 0.9s ease-out; }
+@keyframes flash {
+  0% { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(126, 200, 227, 0.5); }
+  100% { box-shadow: none; }
+}
+/* 配置（%はステージ内の中心座標） */
+.spot[data-spot="frame"] { left: 18%; top: 24%; }
+.spot[data-spot="bookshelf"] { left: 18%; top: 58%; }
+.spot[data-spot="desk"] { left: 48%; top: 66%; }
+.spot[data-spot="safe"] { left: 48%; top: 30%; }
+.spot[data-spot="plant"] { left: 74%; top: 66%; }
+.spot[data-spot="door"] { left: 88%; top: 42%; width: 20%; }
+
+.inventory-bar {
+  display: flex; gap: 10px; align-items: baseline;
   background: var(--panel);
   border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 10px 0;
 }
-.spot .spot-label { display: block; font-weight: bold; font-size: 1.05rem; }
-.spot .spot-note { display: block; color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+.inv-label { color: var(--muted); font-size: 0.85rem; flex: none; }
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -83,16 +156,40 @@ textarea {
   padding: 14px 16px;
   margin: 12px 0;
 }
-.keywords { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.keywords li {
+.keywords { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.keywords button.kw-chip {
+  width: 100%;
+  text-align: left;
   background: var(--panel2);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   font-size: 0.95rem;
 }
 .keywords .kw { color: var(--accent); font-weight: bold; }
+.keywords .copied { color: #7bc47f; font-size: 0.8rem; margin-left: 8px; }
 .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .log li { padding: 8px 12px; border-radius: 8px; background: var(--panel2); font-size: 0.95rem; }
 .log li.ai { background: #3a3320; border-left: 3px solid var(--ai); }
 .log li.ai::before { content: "AI："; color: var(--ai); font-weight: bold; }
-#safe-form { margin: 12px 0; }
+.log li.new { animation: flash 0.9s ease-out; }
+
+/* 金庫ダイアログ */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+.overlay[hidden] { display: none; }
+.dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 380px;
+  display: grid; gap: 10px;
+}
+.safe-message { color: var(--ai); min-height: 1.4em; margin: 0; font-size: 0.92rem; }
+#safe-code { text-align: center; font-size: 1.3rem; letter-spacing: 0.4em; }

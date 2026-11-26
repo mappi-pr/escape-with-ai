@@ -37,15 +37,15 @@ export const HINTS = {
   "ドアの鍵": "ドアの鍵は金庫の中にある。まず金庫を開けるのが先だね。",
 };
 
-// GUI 用のスポット表示（ラベルと状態メモ）
+// GUI 用のスポット表示（ラベル・状態メモ・バッジ・調査済みフラグ）
 export function spotViews(s) {
   return [
-    { id: "door", label: "ドア", note: s.escaped ? "開いた！" : s.hasDoorKey ? "鍵が使えそう" : "固く閉ざされている" },
-    { id: "desk", label: "机の引き出し", note: s.drawerOpen ? "開いている" : "鍵がかかっている" },
-    { id: "bookshelf", label: "本棚", note: s.bookRead ? "赤い本を調べた" : "本が並んでいる" },
-    { id: "plant", label: "観葉植物", note: s.hasKey ? "鉢を調べた" : "部屋の隅にある" },
-    { id: "frame", label: "額縁の絵", note: s.frameChecked ? "よく見た" : "壁に掛かっている" },
-    { id: "safe", label: "金庫", note: s.safeOpen ? "開いている" : "4桁の暗証番号式" },
+    { id: "door", label: "ドア", note: s.escaped ? "開いた！" : s.hasDoorKey ? "鍵が使えそう" : "固く閉ざされている", badge: s.escaped ? "脱出！" : s.hasDoorKey ? "鍵が使える" : "鍵が必要", done: s.escaped },
+    { id: "desk", label: "机の引き出し", note: s.drawerOpen ? "開いている" : "鍵がかかっている", badge: s.drawerOpen ? "調べた" : "鍵がかかっている", done: s.drawerOpen },
+    { id: "bookshelf", label: "本棚", note: s.bookRead ? "赤い本を調べた" : "本が並んでいる", badge: s.bookRead ? "調べた" : "", done: s.bookRead },
+    { id: "plant", label: "観葉植物", note: s.hasKey ? "鉢を調べた" : "部屋の隅にある", badge: s.hasKey ? "調べた" : "", done: s.hasKey },
+    { id: "frame", label: "額縁の絵", note: s.frameChecked ? "よく見た" : "壁に掛かっている", badge: s.frameChecked ? "調べた" : "", done: s.frameChecked },
+    { id: "safe", label: "金庫", note: s.safeOpen ? "開いている" : "4桁の暗証番号式", badge: s.safeOpen ? "開いた" : "番号で開ける", done: s.safeOpen },
   ];
 }
 
