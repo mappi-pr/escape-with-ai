@@ -96,7 +96,8 @@ export class Session {
         lines.push(
           `■ 脱出後のお祝い`,
           `プレイヤーは脱出に成功しました。画面には脱出キーワード「${s.room.clearWord}」が表示され、「ゲームのお祝い：${s.room.clearWord}」とあなたに話しかけるよう案内されています。`,
-          `プレイヤーが「ゲームのお祝い：${s.room.clearWord}」と言ったら（キーワードだけを言った場合も）、それがお祝いの合図です。celebrate ツール（curl の場合は POST /ai/celebrate に {"word":"${s.room.clearWord}","text":"お祝いの言葉"}）でお祝いを届けてください。お祝いは一度だけ届けられます。`
+          `プレイヤーが「ゲームのお祝い：${s.room.clearWord}」と言ったら（キーワードだけを言った場合も）、それがお祝いの合図です。celebrate ツール（curl の場合は POST /ai/celebrate に {"word":"${s.room.clearWord}","text":"お祝いの言葉"}）でお祝いを届けてください。お祝いは一度だけ届けられます。`,
+          `POST で送れない環境では、この brief と同じサーバーの /api/sessions/${this.ctx.id.name}/ai/celebrate-get?word=${s.room.clearWord}&text=（お祝いの言葉をURLエンコードしたもの） を web で開くことでも、お祝いを届けられます。`
         );
       }
     }
@@ -164,6 +165,28 @@ export class Session {
       this.pushEvent("celebration", r.message);
       await this.save();
       return json({ ok: true, seq: s.seq });
+    }
+
+    // POST できない環境（web 閲覧のみのAI）向け：開くだけでお祝いが届く GET 版
+    if (sub === "/ai/celebrate-get" && req.method === "GET") {
+      const r = applyCelebrate(
+        s.room,
+        url.searchParams.get("word") ?? "",
+        url.searchParams.get("text") ?? ""
+      );
+      if (r.ok) {
+        this.pushEvent("celebration", r.message);
+        await this.save();
+      }
+      return new Response(
+        r.ok
+          ? `お祝いがゲーム画面に届きました。${r.message}`
+          : `お祝いを届けられませんでした（${r.reason}）`,
+        {
+          status: r.ok ? 200 : 400,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        }
+      );
     }
 
     return json({ error: "unknown endpoint" }, 404);
