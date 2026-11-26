@@ -1,0 +1,1 @@
+{"description":"自分のAIと一緒に解く脱出ゲーム。人はGUI、AIはCUI（curl）から同じセッションに参加する。","engines":{"node":">=18"},"name":"escape-with-ai","private":true,"scripts":{"start":"node server/server.mjs"},"type":"module","version":"0.1.0"}

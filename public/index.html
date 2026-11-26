@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>escape-with-ai | 自分のAIと一緒に解く脱出ゲーム</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <!-- セッション参加画面 -->
+  <section id="view-join">
+    <h1>escape-with-ai</h1>
+    <p class="lead">自分のAIと一緒に解く脱出ゲーム。<br>あなたは画面で部屋を調べ、AIはヒントと相談の相方です。</p>
+
+    <form id="join-form">
+      <label for="name-input">あなたの名前</label>
+      <div class="row">
+        <input id="name-input" type="text" placeholder="名前を入力" autocomplete="off" required>
+        <button type="submit">部屋に入る</button>
+      </div>
+    </form>
+
+    <div id="prompt-box" hidden>
+      <h2>AIを招待しよう</h2>
+      <p>下のプロンプトをコピーして、あなたのAIに貼ってください。AIがセッションに参加します。</p>
+      <textarea id="prompt-text" rows="14" readonly></textarea>
+      <div class="row">
+        <button id="copy-btn" type="button">プロンプトをコピー</button>
+        <button id="go-room-btn" type="button">ゲーム画面へ</button>
+      </div>
+      <p class="note">※ プロンプト内のURLが参加キーです。他の人に共有しないでください。</p>
+    </div>
+  </section>
+
+  <!-- 謎解き・脱出画面 -->
+  <section id="view-room" hidden>
+    <header class="room-head">
+      <h1>閉ざされた部屋</h1>
+      <p id="player-line"></p>
+    </header>
+
+    <div id="escaped-banner" hidden>脱出成功！ おつかれさまでした。</div>
+
+    <div class="room-grid" id="spots"></div>
+
+    <form id="safe-form" hidden>
+      <label for="safe-code">金庫の暗証番号（4桁）</label>
+      <div class="row">
+        <input id="safe-code" type="text" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+        <button type="submit">開ける</button>
+      </div>
+    </form>
+
+    <div class="panel">
+      <h2>持ち物</h2>
+      <p id="inventory">（なし）</p>
+    </div>
+
+    <div class="panel">
+      <h2>AIに聞いてみよう</h2>
+      <p class="note">詰まったら、あなたのAIに合言葉で聞いてみてください。</p>
+      <ul id="keywords" class="keywords"></ul>
+    </div>
+
+    <div class="panel">
+      <h2>部屋の様子</h2>
+      <ul id="log" class="log"></ul>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
