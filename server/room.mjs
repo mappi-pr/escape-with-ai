@@ -1,9 +1,17 @@
 // 部屋と謎の定義。状態遷移はここに閉じる。
 // 人間は GUI から applyAction を叩き、AI は brief（文章化された状態とヒント集）を読む。
 
-export const SAFE_CODE = "7142";
+function randInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
 
 export function createRoomState() {
+  // 暗証番号と手がかりの数字はセッションごとにランダム。
+  // 同じ答えの使い回しで突破できないようにする。
+  const bookA = randInt(0, 9);
+  const bookB = randInt(0, 9);
+  const stars = randInt(2, 6);
+  const birds = randInt(2, 5);
   return {
     hasKey: false, // 小さな鍵（引き出し用）
     drawerOpen: false,
@@ -13,6 +21,12 @@ export function createRoomState() {
     safeOpen: false,
     hasDoorKey: false,
     escaped: false,
+    // このセッションの答え
+    bookA,
+    bookB,
+    stars,
+    birds,
+    safeCode: `${bookA}${bookB}${stars}${birds}`,
   };
 }
 
@@ -83,14 +97,14 @@ export function applyAction(s, action) {
     case "bookshelf":
       if (!s.bookRead) {
         s.bookRead = true;
-        out.push("本棚の赤い本を抜き出す。背表紙に大きく「7」「1」と書かれている。");
-      } else out.push("赤い本の背表紙には「7」「1」。");
+        out.push(`本棚の赤い本を抜き出す。背表紙に大きく「${s.bookA}」「${s.bookB}」と書かれている。`);
+      } else out.push(`赤い本の背表紙には「${s.bookA}」「${s.bookB}」。`);
       break;
     case "frame":
       if (!s.frameChecked) {
         s.frameChecked = true;
-        out.push("額縁の絵をよく見る。夜空の絵で、星が4つ、鳥が2羽描かれている。");
-      } else out.push("額縁の絵。星が4つ、鳥が2羽。");
+        out.push(`額縁の絵をよく見る。夜空の絵で、星が${s.stars}つ、鳥が${s.birds}羽描かれている。`);
+      } else out.push(`額縁の絵。星が${s.stars}つ、鳥が${s.birds}羽。`);
       break;
     case "safe": {
       if (s.safeOpen) {
@@ -102,7 +116,7 @@ export function applyAction(s, action) {
         out.push("金庫は4桁の暗証番号式だ。番号を入力して開けてみよう。");
         break;
       }
-      if (code === SAFE_CODE) {
+      if (code === s.safeCode) {
         s.safeOpen = true;
         s.hasDoorKey = true;
         out.push("カチッ、と金庫が開いた。中にドアの鍵が入っていた。ドアの鍵を手に入れた。");
@@ -128,8 +142,8 @@ export function describeStateForAI(s) {
   const lines = [];
   lines.push(s.hasKey ? "小さな鍵：入手済み" : "小さな鍵：未入手");
   lines.push(s.drawerOpen ? "引き出し：開錠済み（メモ入手済み）" : "引き出し：未開錠");
-  lines.push(s.bookRead ? "赤い本：調査済み（背表紙は 7・1）" : "赤い本：未調査");
-  lines.push(s.frameChecked ? "額縁の絵：調査済み（星4つ、鳥2羽）" : "額縁の絵：未調査");
+  lines.push(s.bookRead ? `赤い本：調査済み（背表紙は ${s.bookA}・${s.bookB}）` : "赤い本：未調査");
+  lines.push(s.frameChecked ? `額縁の絵：調査済み（星${s.stars}つ、鳥${s.birds}羽）` : "額縁の絵：未調査");
   lines.push(s.safeOpen ? "金庫：開錠済み（ドアの鍵入手済み）" : "金庫：未開錠（暗証番号は4桁）");
   lines.push(s.escaped ? "脱出：成功" : "脱出：まだ");
   return lines.join("\n");
