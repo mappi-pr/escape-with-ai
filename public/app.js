@@ -31,6 +31,7 @@ $("join-form").addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error("create failed");
     const data = await res.json();
     sessionId = data.sessionId;
+    history.replaceState(null, "", `?session=${sessionId}`);
     $("prompt-text").value = data.joinPrompt;
     $("copy-btn").disabled = false;
     $("go-room-btn").disabled = false;
@@ -64,6 +65,21 @@ $("go-room-btn").addEventListener("click", () => {
   window.scrollTo(0, 0);
   startPolling();
 });
+
+// URL の ?session=<id> があれば、その部屋に直接入る（リロードしても続きから遊べる）
+(async () => {
+  const sid = new URLSearchParams(location.search).get("session");
+  if (!sid || !/^[a-f0-9]+$/.test(sid)) return;
+  sessionId = sid;
+  const state = await fetchState().catch(() => null);
+  if (!state) {
+    sessionId = null;
+    return;
+  }
+  $("view-join").hidden = true;
+  $("view-room").hidden = false;
+  startPolling();
+})();
 
 $("rejoin-btn").addEventListener("click", async () => {
   if (!sessionId) return;
