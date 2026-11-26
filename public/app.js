@@ -29,23 +29,30 @@ function setStep(n, mode) {
 
 $("join-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const name = $("name-input").value.trim();
-  if (!name) return;
-  const res = await fetch("/api/sessions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  const data = await res.json();
-  sessionId = data.sessionId;
-  $("mcp-url").value = data.mcpUrl;
-  $("mcp-url-copy").disabled = false;
-  $("prompt-text").value = data.joinPrompt;
-  $("copy-btn").disabled = false;
-  $("go-room-btn").disabled = false;
-  setStep(1, "done");
-  setStep(2, "active");
-  $("step2").scrollIntoView({ behavior: "smooth", block: "center" });
+  const name = $("name-input").value.trim() || "プレイヤー";
+  const errEl = $("join-error");
+  errEl.hidden = true;
+  try {
+    const res = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error("create failed");
+    const data = await res.json();
+    sessionId = data.sessionId;
+    $("mcp-url").value = data.mcpUrl;
+    $("mcp-url-copy").disabled = false;
+    $("prompt-text").value = data.joinPrompt;
+    $("copy-btn").disabled = false;
+    $("go-room-btn").disabled = false;
+    setStep(1, "done");
+    setStep(2, "active");
+    $("step2").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch {
+    errEl.textContent = "部屋の作成に失敗しました。通信環境を確認して、もう一度試してください。";
+    errEl.hidden = false;
+  }
 });
 
 $("copy-btn").addEventListener("click", async () => {
