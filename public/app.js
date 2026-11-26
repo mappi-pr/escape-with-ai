@@ -107,10 +107,13 @@ async function fetchEvents() {
   const data = await res.json();
   let newest = null;
   for (const ev of data.events) {
+    // ポーリングとアクション後の取得が重なると同じイベントが二重に届くため、seq で弾く
+    if (ev.seq <= lastSeq) continue;
+    lastSeq = ev.seq;
     appendLog(ev, ev === data.events[data.events.length - 1]);
     newest = ev;
   }
-  lastSeq = data.lastSeq;
+  if (data.lastSeq > lastSeq) lastSeq = data.lastSeq;
   return newest;
 }
 
@@ -135,9 +138,16 @@ function render(state) {
       : "";
   }
 
+  // スポットは状態が変わった時だけ作り直す。毎ポーリングで作り直すと、
+  // クリックの最中にボタンが差し替わってクリックが消えることがある。
+  const spotsSig = state.spots
+    .map((sp) => [sp.id, sp.note, sp.badge, sp.done].join(":"))
+    .join("|");
   const stage = $("spots");
-  stage.innerHTML = "";
-  for (const sp of state.spots) {
+  if (spotsSig !== render.prevSpotsSig) {
+    render.prevSpotsSig = spotsSig;
+    stage.innerHTML = "";
+    for (const sp of state.spots) {
     const b = document.createElement("button");
     b.className = "spot" + (sp.id === "door" ? " door" : "");
     b.dataset.spot = sp.id;
@@ -160,12 +170,16 @@ function render(state) {
     prevNotes[sp.id] = sp.note;
     b.addEventListener("click", () => onSpot(sp.id));
     stage.appendChild(b);
+    }
   }
 
   $("inventory").textContent =
     state.inventory.length > 0 ? state.inventory.join("、") : "（なし）";
 
   const kw = $("keywords");
+  const kwSig = state.keywords.join("|");
+  if (kwSig === render.prevKwSig) return;
+  render.prevKwSig = kwSig;
   kw.innerHTML = "";
   if (state.keywords.length === 0) {
     const li = document.createElement("li");

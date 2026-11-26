@@ -23,6 +23,8 @@ export function createRoomState() {
     bookRead: false,
     frameChecked: false,
     safeOpen: false,
+    safeFails: 0, // 金庫の入力ミス回数（総当たり封じのロック判定用）
+    safeLockedUntil: 0, // 金庫ロックの解除時刻（ms）。0 はロックされていない
     hasDoorKey: false,
     escaped: false,
     clearWord: CLEAR_WORDS[randInt(0, CLEAR_WORDS.length - 1)],
@@ -51,9 +53,9 @@ export function visibleKeywords(s) {
 export const HINTS = {
   "鍵のありか": "部屋の隅の観葉植物。鉢の土の中を確かめてみて。",
   "赤い本の数字": "本棚の赤い本、背表紙の数字が金庫のはじめの2桁だよ。",
-  "額縁の絵": "額縁の絵の中にあるものを数えてみて。その数が金庫の残りの2桁になるよ。",
+  "額縁の絵": "額縁の絵の中にある星と鳥の数が、金庫の残りの2桁になるよ。画面の絵だけでは数えきれないけど、状態（brief）を取得すれば正確な数が分かるよ。",
   "金庫の開け方":
-    "暗証番号は4桁。はじめの2桁は赤い本、残りの2桁は額縁の絵の中。金庫をクリックすると番号を入力できる。",
+    "暗証番号は4桁。はじめの2桁は赤い本の背表紙、あとの2桁は額縁の絵の星と鳥の数だよ（この組み立て方は画面のメモには書かれていなくて、相方だけが知っている）。金庫をクリックすると番号を入力できる。3回間違えると1分ほどロックされるから気をつけて。",
   "ドアの鍵": "ドアの鍵は金庫の中にある。まず金庫を開けるのが先だね。",
 };
 
@@ -65,7 +67,7 @@ export function spotViews(s) {
     { id: "bookshelf", label: "本棚", note: s.bookRead ? "赤い本を調べた" : "本が並んでいる", badge: s.bookRead ? "調べた" : "", done: s.bookRead },
     { id: "plant", label: "観葉植物", note: s.hasKey ? "鉢を調べた" : "部屋の隅にある", badge: s.hasKey ? "調べた" : "", done: s.hasKey },
     { id: "frame", label: "額縁の絵", note: s.frameChecked ? "よく見た" : "壁に掛かっている", badge: s.frameChecked ? "調べた" : "", done: s.frameChecked },
-    { id: "safe", label: "金庫", note: s.safeOpen ? "開いている" : "4桁の暗証番号式", badge: s.safeOpen ? "開いた" : "番号で開ける", done: s.safeOpen },
+    { id: "safe", label: "金庫", note: s.safeOpen ? "開いている" : s.safeLockedUntil && Date.now() < s.safeLockedUntil ? "ロック中" : "4桁の暗証番号式", badge: s.safeOpen ? "開いた" : s.safeLockedUntil && Date.now() < s.safeLockedUntil ? "ロック中" : "番号で開ける", done: s.safeOpen },
   ];
 }
 
@@ -96,7 +98,7 @@ export function applyAction(s, action) {
         s.drawerOpen = true;
         s.memoRead = true;
         out.push(
-          "小さな鍵で引き出しを開けた。中にはメモが1枚。「金庫の暗証番号は4桁。はじめの2桁は本棚の赤い本、あとの2桁は額縁の絵の中」"
+          "小さな鍵で引き出しを開けた。中にはメモが1枚。「金庫の暗証番号は4桁。組み立て方は、相方に聞いて」"
         );
       }
       break;
@@ -107,10 +109,12 @@ export function applyAction(s, action) {
       } else out.push(`赤い本の背表紙には「${s.bookA}」「${s.bookB}」。`);
       break;
     case "frame":
+      // 画面の絵からは正確な数を読み取れない（星も鳥もたくさんいる）。
+      // 正確な数は AI が brief の状態で知る。プレイヤーが相方に聞く流れを作るため。
       if (!s.frameChecked) {
         s.frameChecked = true;
-        out.push(`額縁の絵をよく見る。夜空の絵で、星が${s.stars}つ、鳥が${s.birds}羽描かれている。`);
-      } else out.push(`額縁の絵。星が${s.stars}つ、鳥が${s.birds}羽。`);
+        out.push("額縁の絵をよく見る。夜空の絵だ。星がたくさん瞬き、鳥の群れが飛んでいる。目では正確な数を数えきれない。");
+      } else out.push("額縁の絵。星と鳥でいっぱいの夜空。数はやっぱり数えきれない。");
       break;
     case "safe": {
       if (s.safeOpen) {
@@ -122,12 +126,24 @@ export function applyAction(s, action) {
         out.push("金庫は4桁の暗証番号式だ。番号を入力して開けてみよう。");
         break;
       }
+      if (s.safeLockedUntil && Date.now() < s.safeLockedUntil) {
+        out.push("金庫はロックされている。間違えすぎたみたいだ。少し待てばまた入力できる。");
+        break;
+      }
       if (code === s.safeCode) {
         s.safeOpen = true;
         s.hasDoorKey = true;
+        s.safeFails = 0;
         out.push("カチッ、と金庫が開いた。中にドアの鍵が入っていた。ドアの鍵を手に入れた。");
       } else {
-        out.push("ピー、とエラー音。暗証番号が違うようだ。");
+        s.safeFails = (s.safeFails ?? 0) + 1;
+        if (s.safeFails >= 3) {
+          s.safeLockedUntil = Date.now() + 60_000;
+          s.safeFails = 0;
+          out.push("ピー、とエラー音。暗証番号が違うようだ。何度も間違えたので金庫がロックされた。1分ほど待てばまた入力できる。");
+        } else {
+          out.push("ピー、とエラー音。暗証番号が違うようだ。");
+        }
       }
       break;
     }
@@ -164,6 +180,11 @@ export function describeStateForAI(s) {
   lines.push(s.bookRead ? `赤い本：調査済み（背表紙は ${s.bookA}・${s.bookB}）` : "赤い本：未調査");
   lines.push(s.frameChecked ? `額縁の絵：調査済み（星${s.stars}つ、鳥${s.birds}羽）` : "額縁の絵：未調査");
   lines.push(s.safeOpen ? "金庫：開錠済み（ドアの鍵入手済み）" : "金庫：未開錠（暗証番号は4桁）");
+  if (!s.safeOpen) {
+    lines.push("金庫の暗証番号の組み立て方（画面のメモには書かれていない、相方だけの知識）：1〜2桁目＝赤い本の背表紙の数字2つ、3桁目＝額縁の絵の星の数、4桁目＝額縁の絵の鳥の数");
+    if (s.safeLockedUntil && Date.now() < s.safeLockedUntil)
+      lines.push(`金庫はいまロック中（入力ミスが続いたため。あと約${Math.ceil((s.safeLockedUntil - Date.now()) / 1000)}秒で解除）`);
+  }
   lines.push(s.escaped ? "脱出：成功" : "脱出：まだ");
   if (s.escaped) {
     lines.push(`脱出キーワード：「${s.clearWord}」（画面に表示されている。プレイヤーがあなたにこの言葉を言ったらお祝いの合図）`);
