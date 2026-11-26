@@ -161,9 +161,9 @@ export default {
         body: JSON.stringify({ id, name }),
       });
       if (!initRes.ok) return json({ error: "failed to create session" }, 500);
-      const mcpUrl = `${url.origin}/mcp/${id}`;
-      const joinPrompt = buildJoinPrompt({ baseUrl: url.origin, sessionId: id, name, mcpUrl });
-      return json({ sessionId: id, name, joinPrompt, mcpUrl }, 201);
+      const mcpRoot = `${url.origin}/mcp`;
+      const joinPrompt = buildJoinPrompt({ baseUrl: url.origin, sessionId: id, name, mcpRoot });
+      return json({ sessionId: id, name, joinPrompt, mcpUrl: mcpRoot }, 201);
     }
 
     const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
@@ -179,7 +179,7 @@ export default {
           baseUrl: url.origin,
           sessionId: m[1],
           name: st.name,
-          mcpUrl: `${url.origin}/mcp/${m[1]}`,
+          mcpRoot: `${url.origin}/mcp`,
         });
         return json({ prompt });
       }
@@ -190,36 +190,49 @@ export default {
     }
 
     // MCP（アプリ版 AI のカスタムコネクタ用）。操作は DO の既存エンドポイント経由。
+    const opsForStub = (stub) => ({
+      brief: async () => {
+        const r = await stub.fetch("https://session/ai/brief");
+        return r.ok ? r.text() : null;
+      },
+      events: async (since) => {
+        const r = await stub.fetch(`https://session/events?since=${since}`);
+        if (!r.ok) return null;
+        const d = await r.json();
+        return (
+          d.events.map((e) => `#${e.seq} [${e.kind}] ${e.text}`).join("\n") ||
+          "（新しい出来事はない）"
+        );
+      },
+      postMessage: async (text) => {
+        const r = await stub.fetch("https://session/ai/message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        return r.ok;
+      },
+    });
+    const runMcp = async (resolve) => {
+      const body = await req.json().catch(() => null);
+      const { status, payload } = await handleMcp(body, resolve);
+      if (payload === null) return new Response(null, { status });
+      return json(payload, status);
+    };
+
+    // 常設エンドポイント（登録は一度だけ。セッションはツール引数で選ぶ）
+    if (path === "/mcp" && req.method === "POST") {
+      return runMcp(async (sid) => {
+        if (!/^[a-f0-9]+$/.test(sid)) return null;
+        return opsForStub(env.SESSION.getByName(sid));
+      });
+    }
+
+    // セッション別エンドポイント（ID が一致するセッションだけ触れる）
     const mcpMatch = path.match(/^\/mcp\/([a-f0-9]+)$/);
     if (mcpMatch && req.method === "POST") {
       const stub = env.SESSION.getByName(mcpMatch[1]);
-      const ops = {
-        brief: async () => {
-          const r = await stub.fetch("https://session/ai/brief");
-          return r.ok ? r.text() : null;
-        },
-        events: async (since) => {
-          const r = await stub.fetch(`https://session/events?since=${since}`);
-          if (!r.ok) return null;
-          const d = await r.json();
-          return (
-            d.events.map((e) => `#${e.seq} [${e.kind}] ${e.text}`).join("\n") ||
-            "（新しい出来事はない）"
-          );
-        },
-        postMessage: async (text) => {
-          const r = await stub.fetch("https://session/ai/message", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text }),
-          });
-          return r.ok;
-        },
-      };
-      const body = await req.json().catch(() => null);
-      const { status, payload } = await handleMcp(body, ops);
-      if (payload === null) return new Response(null, { status });
-      return json(payload, status);
+      return runMcp(async (sid) => (sid === mcpMatch[1] ? opsForStub(stub) : null));
     }
 
     if (path.startsWith("/api/")) return json({ error: "not found" }, 404);

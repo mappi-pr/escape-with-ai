@@ -9,7 +9,7 @@
 
 1. 参加画面で名前を入力すると、セッションが発行され、AI 招待プロンプトが表示される
 2. プロンプトを自分の AI に貼ると、AI がセッションに参加し、部屋に挨拶を残す。接続方法は人間が選ばず、プロンプトの指示で AI が使える方を自分で選ぶ（両方式は同じセッション状態を触るので、同時に使うこともできる）：
-   - **ツール（MCP）**：`https://<公開URL>/mcp/<セッションID>` をカスタムコネクタとして追加した AI が、ツール（get_brief / get_events / post_message）で参加する
+   - **ツール（MCP）**：`https://<公開URL>/mcp` をカスタムコネクタとして一度だけ追加した AI が、ツール（get_brief / get_events / post_message、引数にセッションID）で参加する。セッション別 URL `/mcp/<セッションID>` も同じツール形で受け付ける
    - **curl**：シェルや HTTP を実行できる AI が、curl で API を叩く
    - どちらも無い AI は、プロンプトの指示で人間にコネクタ登録を頼む
 3. 人は画面をぽちぽち調べて謎を解く
@@ -55,7 +55,7 @@ Workers + Durable Objects で動かす。セッション1つ = Durable Object 1�
 | GET | `/api/sessions/:id/ai/brief` | AI 用：状態の文章化＋ヒント集＋最近の出来事 |
 | POST | `/api/sessions/:id/ai/message` `{text}` | AI が部屋にメッセージを残す |
 | GET | `/api/sessions/:id/rejoin-prompt` | 接続が切れた AI の再参加プロンプト |
-| POST | `/mcp/:id` | MCP（JSON-RPC）。ツール：get_brief / get_events / post_message |
+| POST | `/mcp` / `/mcp/:id` | MCP（JSON-RPC）。ツール：get_brief / get_events / post_message（引数に sessionId） |
 
 セッション ID（12桁 hex）そのものが参加キー。現状はインメモリで、再起動すると消える。
 

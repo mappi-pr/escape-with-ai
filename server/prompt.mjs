@@ -3,18 +3,19 @@
 // 接続方法は AI 自身が選ぶ：MCP ツール → curl → どちらも無ければ人間にコネクタ登録を頼む。
 // 再参加用（buildRejoinPrompt）は、接続が切れた AI が途中から戻るためのもの。状態はサーバー側に残っている。
 
-function connectionSection(base, mcpUrl) {
+function connectionSection(base, sessionId, mcpRoot) {
   return [
     `■ 接続のしかた（使える方法を、あなた自身が選んでください）`,
-    `方法A「ツール」：このチャットに escape-with-ai のツール（get_brief / get_events / post_message）が接続されていれば、それを使ってください。`,
+    `このゲームのセッションIDは「${sessionId}」です。`,
+    `方法A「ツール」：このチャットに escape-with-ai のツール（get_brief / get_events / post_message）が接続されていれば、それを使ってください。ツールを呼ぶ時は、sessionId 引数に上のセッションIDを毎回渡してください。`,
     `方法B「curl」：シェルが使える環境なら、次の URL を curl で使ってください。`,
     `  状態とヒント集： curl -s ${base}/ai/brief`,
     `  出来事の一覧  ： curl -s "${base}/events?since=0"（since に最後に見た seq を入れると差分だけ返ります）`,
     `  部屋への投稿  ： curl -s -X POST ${base}/ai/message -H 'Content-Type: application/json' -d '{"text":"ここにメッセージ"}'`,
     `まず方法Aを試し、ツールが無ければ方法Bを使ってください。`,
     `どちらも使えない場合は、プレイヤーに「escape-with-ai のコネクタ（MCP）として、この URL を AI アプリの設定に追加して」と頼んでください：`,
-    mcpUrl,
-    `追加してもらえたら、方法Aのツールで改めて状態を取得してください。`,
+    mcpRoot,
+    `この登録は一度だけです（セッションが変わっても登録し直す必要はありません）。追加してもらえたら、方法Aのツールで改めて状態を取得してください。`,
   ];
 }
 
@@ -32,7 +33,7 @@ const HINT_RULES = [
   `- プレイヤーが詰まった様子なら、部屋に短い励ましや問いかけのメッセージを残すのは歓迎です。`,
 ];
 
-export function buildJoinPrompt({ baseUrl, sessionId, name, mcpUrl }) {
+export function buildJoinPrompt({ baseUrl, sessionId, name, mcpRoot }) {
   const base = `${baseUrl}/api/sessions/${sessionId}`;
   return [
     `あなたは脱出ゲームの相方として招待されました。プレイヤーは「${name}」さんです。`,
@@ -40,7 +41,7 @@ export function buildJoinPrompt({ baseUrl, sessionId, name, mcpUrl }) {
     `プレイヤーは画面を見ながら部屋を調べています。あなたはヒント係であり、相談相手です。`,
     `このあとプレイヤーは、いつもの会話の流れのまま、あなたに話しかけて遊びます。構えず、普段どおりの距離感で付き合ってください。`,
     ``,
-    ...connectionSection(base, mcpUrl),
+    ...connectionSection(base, sessionId, mcpRoot),
     ``,
     `■ 最初にやること`,
     `選んだ方法で現在の状態（brief）を受け取り、挨拶のメッセージを1つ部屋に残してください。`,
@@ -54,14 +55,14 @@ export function buildJoinPrompt({ baseUrl, sessionId, name, mcpUrl }) {
   ].join("\n");
 }
 
-export function buildRejoinPrompt({ baseUrl, sessionId, name, mcpUrl }) {
+export function buildRejoinPrompt({ baseUrl, sessionId, name, mcpRoot }) {
   const base = `${baseUrl}/api/sessions/${sessionId}`;
   return [
     `あなたは脱出ゲームの相方として「再参加」を招待されました。プレイヤーは「${name}」さんです。`,
     `接続が切れてしまったための途中参加です。ゲームの状態はサーバーに残っているので、最初からにはなりません。`,
     `あなたは画面（GUI）を見られません。代わりに、ゲームの状態を読み、部屋にメッセージを残せます。`,
     ``,
-    ...connectionSection(base, mcpUrl),
+    ...connectionSection(base, sessionId, mcpRoot),
     ``,
     `■ まず状況を把握すること`,
     `選んだ方法で、現在の状態（brief）と、これまでの出来事を全部（events を since=0 で）受け取ってください。`,

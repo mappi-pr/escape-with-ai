@@ -1,7 +1,11 @@
 // 最小の MCP（Model Context Protocol）サーバーハンドラ。
-// Streamable HTTP の POST JSON-RPC を、セッション操作（ops）に橋渡しする。
+// Streamable HTTP の POST JSON-RPC を、セッション操作に橋渡しする。
 // アプリ版 AI（Claude / ChatGPT 等）のカスタムコネクタから、ツールとしてゲームに参加できるようにするためのもの。
 //
+// 常設エンドポイント（/mcp）に一度登録すれば、以後はセッションIDをツール引数で渡すだけで遊べる。
+// セッション別エンドポイント（/mcp/:id）も同じツール形で受ける（resolve 側で ID の一致を縛る）。
+//
+// resolve(sessionId): Promise<ops|null>
 // ops: {
 //   brief(): Promise<string|null>,          // 状態＋ヒント集。セッションが無ければ null
 //   events(since): Promise<string|null>,    // 出来事のテキスト。セッションが無ければ null
@@ -13,24 +17,37 @@ const TOOLS = [
   {
     name: "get_brief",
     description:
-      "脱出ゲームの現在の状態（調査の進み具合）と、あなたが持っているヒント集と、最近の出来事をまとめて取得する。会話の節目や、合言葉で質問された時にまず使う。",
-    inputSchema: { type: "object", properties: {} },
+      "脱出ゲームの現在の状態（調査の進み具合）と、あなたが持っているヒント集と、最近の出来事をまとめて取得する。会話の節目や、合言葉で質問された時にまず使う。sessionId には参加プロンプトに書かれたセッションIDを渡す。",
+    inputSchema: {
+      type: "object",
+      properties: { sessionId: { type: "string", description: "参加プロンプトに書かれたセッションID" } },
+      required: ["sessionId"],
+    },
   },
   {
     name: "get_events",
-    description: "プレイヤーの行動や出来事の一覧を取得する。since に最後に見た seq を入れると差分だけ返る（0 で全部）。",
+    description:
+      "プレイヤーの行動や出来事の一覧を取得する。since に最後に見た seq を入れると差分だけ返る（0 で全部）。sessionId には参加プロンプトに書かれたセッションIDを渡す。",
     inputSchema: {
       type: "object",
-      properties: { since: { type: "number", description: "最後に見たイベントの seq（省略時 0）" } },
+      properties: {
+        sessionId: { type: "string", description: "参加プロンプトに書かれたセッションID" },
+        since: { type: "number", description: "最後に見たイベントの seq（省略時 0）" },
+      },
+      required: ["sessionId"],
     },
   },
   {
     name: "post_message",
-    description: "ゲーム画面の部屋に、相方の AI としてメッセージを残す。挨拶や励まし、気づいたことなどを短く。",
+    description:
+      "ゲーム画面の部屋に、相方の AI としてメッセージを残す。挨拶や励まし、気づいたことなどを短く。sessionId には参加プロンプトに書かれたセッションIDを渡す。",
     inputSchema: {
       type: "object",
-      properties: { text: { type: "string", description: "部屋に表示するメッセージ" } },
-      required: ["text"],
+      properties: {
+        sessionId: { type: "string", description: "参加プロンプトに書かれたセッションID" },
+        text: { type: "string", description: "部屋に表示するメッセージ" },
+      },
+      required: ["sessionId", "text"],
     },
   },
 ];
@@ -45,7 +62,7 @@ function toolText(text, isError = false) {
   return { content: [{ type: "text", text }], isError };
 }
 
-export async function handleMcp(body, ops) {
+export async function handleMcp(body, resolve) {
   if (body === null || typeof body !== "object" || Array.isArray(body)) {
     return {
       status: 400,
@@ -59,7 +76,7 @@ export async function handleMcp(body, ops) {
     return ok(id, {
       protocolVersion: params?.protocolVersion ?? "2025-03-26",
       capabilities: { tools: {} },
-      serverInfo: { name: "escape-with-ai", version: "0.1.0" },
+      serverInfo: { name: "escape-with-ai", version: "0.2.0" },
     });
   }
   if (method === "ping") return ok(id, {});
@@ -71,6 +88,22 @@ export async function handleMcp(body, ops) {
   if (method === "tools/call") {
     const name = params?.name;
     const args = params?.arguments ?? {};
+    const sessionId = typeof args.sessionId === "string" ? args.sessionId : "";
+    if (!sessionId) {
+      return ok(
+        id,
+        toolText("sessionId が必要です。参加プロンプトに書かれたセッションIDを渡してください。", true)
+      );
+    }
+    let ops = null;
+    try {
+      ops = await resolve(sessionId);
+    } catch {
+      ops = null;
+    }
+    if (!ops) {
+      return ok(id, toolText(`セッション ${sessionId} が見つかりませんでした。`, true));
+    }
     try {
       if (name === "get_brief") {
         const text = await ops.brief();

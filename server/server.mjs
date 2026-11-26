@@ -120,9 +120,9 @@ const server = createServer(async (req, res) => {
     const name = String(body.name ?? "").trim() || "プレイヤー";
     const s = newSession(name);
     const baseUrl = publicBase(req);
-    const mcpUrl = `${baseUrl}/mcp/${s.id}`;
-    const joinPrompt = buildJoinPrompt({ baseUrl, sessionId: s.id, name, mcpUrl });
-    return sendJson(res, 201, { sessionId: s.id, name, joinPrompt, mcpUrl });
+    const mcpRoot = `${baseUrl}/mcp`;
+    const joinPrompt = buildJoinPrompt({ baseUrl, sessionId: s.id, name, mcpRoot });
+    return sendJson(res, 201, { sessionId: s.id, name, joinPrompt, mcpUrl: mcpRoot });
   }
 
   const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
@@ -139,7 +139,7 @@ const server = createServer(async (req, res) => {
         baseUrl,
         sessionId: s.id,
         name: s.name,
-        mcpUrl: `${baseUrl}/mcp/${s.id}`,
+        mcpRoot: `${baseUrl}/mcp`,
       });
       return sendJson(res, 200, { prompt });
     }
@@ -176,31 +176,44 @@ const server = createServer(async (req, res) => {
   }
 
   // --- MCP（アプリ版 AI のカスタムコネクタ用） ---
-  const mcpMatch = path.match(/^\/mcp\/([a-f0-9]+)$/);
-  if (mcpMatch && req.method === "POST") {
-    const s = sessions.get(mcpMatch[1]);
+  const opsFor = (s) => ({
+    brief: async () => aiBrief(s),
+    events: async (since) =>
+      s.events
+        .filter((e) => e.seq > since)
+        .map((e) => `#${e.seq} [${e.kind}] ${e.text}`)
+        .join("\n") || "（新しい出来事はない）",
+    postMessage: async (text) => {
+      pushEvent(s, "ai", text);
+      return true;
+    },
+  });
+  const runMcp = async (req, res, resolve) => {
     const body = await readJson(req);
-    const ops = {
-      brief: async () => (s ? aiBrief(s) : null),
-      events: async (since) =>
-        s
-          ? s.events
-              .filter((e) => e.seq > since)
-              .map((e) => `#${e.seq} [${e.kind}] ${e.text}`)
-              .join("\n") || "（新しい出来事はない）"
-          : null,
-      postMessage: async (text) => {
-        if (!s) return false;
-        pushEvent(s, "ai", text);
-        return true;
-      },
-    };
-    const { status, payload } = await handleMcp(body, ops);
+    const { status, payload } = await handleMcp(body, resolve);
     if (payload === null) {
       res.writeHead(status);
       return res.end();
     }
     return sendJson(res, status, payload);
+  };
+
+  // 常設エンドポイント（登録は一度だけ。セッションはツール引数で選ぶ）
+  if (path === "/mcp" && req.method === "POST") {
+    return runMcp(req, res, async (sid) => {
+      const s = sessions.get(sid);
+      return s ? opsFor(s) : null;
+    });
+  }
+
+  // セッション別エンドポイント（ID が一致するセッションだけ触れる）
+  const mcpMatch = path.match(/^\/mcp\/([a-f0-9]+)$/);
+  if (mcpMatch && req.method === "POST") {
+    const fixed = sessions.get(mcpMatch[1]);
+    return runMcp(req, res, async (sid) => {
+      if (!fixed || sid !== mcpMatch[1]) return null;
+      return opsFor(fixed);
+    });
   }
 
   // --- 静的ファイル ---
