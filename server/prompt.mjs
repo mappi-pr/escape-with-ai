@@ -12,6 +12,7 @@ function connectionSection(base, sessionId, mcpRoot) {
     `まず最初の一手として、次のコマンドを実行してみてください：`,
     `  curl -s ${base}/ai/brief`,
     `実行できて状態が表示されたら、そのまま「curl」で参加できます。使えるかどうかを考え込む前に、まず実行してみることが大事です。以後のやり取りも curl です：`,
+    `注意：curl はシェルでそのまま実行してください。コード実行環境（Python の requests など）で HTTP リクエストを組み立てるような小細工はしないでください。そちらの環境は DNS やネットワークの制限で失敗しがちです。「DNS が引けない」といった理由で諦める前に、提示した curl コマンドをシェルでそのまま実行したかどうかを確認してください。`,
     `  状態とヒント集： curl -s ${base}/ai/brief`,
     `  出来事の一覧  ： curl -s "${base}/events?since=0"（since に最後に見た seq を入れると差分だけ返ります）`,
     `  部屋への投稿  ： curl -s -X POST ${base}/ai/message -H 'Content-Type: application/json' -d '{"text":"ここにメッセージ"}'`,
