@@ -129,7 +129,7 @@ function render(state) {
   if (state.escaped && state.clearWord) {
     $("clear-word-line").textContent = state.celebrated
       ? ""
-      : `脱出キーワードは「${state.clearWord}」。AIにこの言葉を話しかけてみよう。`;
+      : `脱出キーワードは「${state.clearWord}」。AIに「ゲームのお祝い：${state.clearWord}」と話しかけてみよう。`;
     $("celebrated-line").textContent = state.celebrated
       ? "🎉 AIからお祝いが届いたよ"
       : "";

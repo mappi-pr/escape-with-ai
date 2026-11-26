@@ -139,8 +139,8 @@ textarea {
 .spot[data-spot="bookshelf"] { left: 18%; top: 58%; }
 .spot[data-spot="desk"] { left: 48%; top: 66%; }
 .spot[data-spot="safe"] { left: 48%; top: 30%; }
-.spot[data-spot="plant"] { left: 74%; top: 66%; }
-.spot[data-spot="door"] { left: 88%; top: 42%; width: 20%; }
+.spot[data-spot="plant"] { left: 71%; top: 68%; }
+.spot[data-spot="door"] { left: 89%; top: 42%; width: 18%; z-index: 2; }
 
 .inventory-bar {
   display: flex; gap: 10px; align-items: baseline;

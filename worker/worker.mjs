@@ -95,8 +95,8 @@ export class Session {
       } else {
         lines.push(
           `■ 脱出後のお祝い`,
-          `プレイヤーは脱出に成功しました。画面には脱出キーワード「${s.room.clearWord}」が表示されています。`,
-          `プレイヤーがあなたに「${s.room.clearWord}」と言ったら、それがお祝いの合図です。celebrate ツール（curl の場合は POST /ai/celebrate に {"word":"${s.room.clearWord}","text":"お祝いの言葉"}）でお祝いを届けてください。お祝いは一度だけ届けられます。`
+          `プレイヤーは脱出に成功しました。画面には脱出キーワード「${s.room.clearWord}」が表示され、「ゲームのお祝い：${s.room.clearWord}」とあなたに話しかけるよう案内されています。`,
+          `プレイヤーが「ゲームのお祝い：${s.room.clearWord}」と言ったら（キーワードだけを言った場合も）、それがお祝いの合図です。celebrate ツール（curl の場合は POST /ai/celebrate に {"word":"${s.room.clearWord}","text":"お祝いの言葉"}）でお祝いを届けてください。お祝いは一度だけ届けられます。`
         );
       }
     }
