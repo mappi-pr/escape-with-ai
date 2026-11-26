@@ -10,6 +10,7 @@
 //   brief(): Promise<string|null>,          // 状態＋ヒント集。セッションが無ければ null
 //   events(since): Promise<string|null>,    // 出来事のテキスト。セッションが無ければ null
 //   postMessage(text): Promise<boolean>,    // 部屋へメッセージ。失敗時 false
+//   celebrate(word, text): Promise<{ok, reason?, message?}>,  // 脱出後のお祝い
 // }
 // 戻り値: { status, payload } — payload が null の時はボディなし（通知）。
 
@@ -48,6 +49,20 @@ const TOOLS = [
         text: { type: "string", description: "部屋に表示するメッセージ" },
       },
       required: ["sessionId", "text"],
+    },
+  },
+  {
+    name: "celebrate",
+    description:
+      "脱出成功のあと、プレイヤーが脱出キーワード（brief に書かれている言葉）をあなたに言った時に呼ぶ。お祝いの言葉がゲーム画面に特別な表示で届く。届けられるのは一度だけ。sessionId には参加プロンプトに書かれたセッションIDを渡す。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: { type: "string", description: "参加プロンプトに書かれたセッションID" },
+        word: { type: "string", description: "プレイヤーが言った脱出キーワード" },
+        text: { type: "string", description: "お祝いの言葉（省略可）" },
+      },
+      required: ["sessionId", "word"],
     },
   },
 ];
@@ -121,6 +136,13 @@ export async function handleMcp(body, resolve) {
         const done = await ops.postMessage(text);
         if (!done) return ok(id, toolText("メッセージを残せませんでした（セッションが見つからない可能性）。", true));
         return ok(id, toolText("部屋にメッセージを残しました。"));
+      }
+      if (name === "celebrate") {
+        const word = String(args.word ?? "").trim();
+        if (!word) return ok(id, toolText("word（脱出キーワード）が必要です。", true));
+        const r = await ops.celebrate(word, String(args.text ?? ""));
+        if (!r?.ok) return ok(id, toolText(r?.reason ?? "お祝いを届けられませんでした。", true));
+        return ok(id, toolText("お祝いを届けました。"));
       }
       return ok(id, toolText(`未知のツールです: ${name}`, true));
     } catch {

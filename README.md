@@ -55,8 +55,9 @@ Workers + Durable Objects で動かす。セッション1つ = Durable Object 1�
 | POST | `/api/sessions/:id/action` `{spot, code?}` | 人のクリック（部屋を調べる） |
 | GET | `/api/sessions/:id/ai/brief` | AI 用：状態の文章化＋ヒント集＋最近の出来事 |
 | POST | `/api/sessions/:id/ai/message` `{text}` | AI が部屋にメッセージを残す |
+| POST | `/api/sessions/:id/ai/celebrate` `{word, text}` | 脱出後、プレイヤーが脱出キーワードを AI に言うと AI がお祝いを届ける（一度だけ） |
 | GET | `/api/sessions/:id/rejoin-prompt` | 接続が切れた AI の再参加プロンプト |
-| POST | `/mcp` / `/mcp/:id` | MCP（JSON-RPC）。ツール：get_brief / get_events / post_message（引数に sessionId） |
+| POST | `/mcp` / `/mcp/:id` | MCP（JSON-RPC）。ツール：get_brief / get_events / post_message / celebrate（引数に sessionId） |
 
 セッション ID（12桁 hex）そのものが参加キー。現状はインメモリで、再起動すると消える。
 

@@ -9,6 +9,7 @@ import {
   spotViews,
   inventory,
   applyAction,
+  applyCelebrate,
   describeStateForAI,
   HINTS,
 } from "../server/room.mjs";
@@ -59,6 +60,8 @@ export class Session {
       inventory: inventory(s.room),
       keywords: visibleKeywords(s.room),
       escaped: s.room.escaped,
+      clearWord: s.room.escaped ? s.room.clearWord : null,
+      celebrated: s.room.celebrated,
       lastSeq: s.seq,
     };
   }
@@ -72,7 +75,7 @@ export class Session {
       .slice(-10)
       .map((e) => `#${e.seq} [${e.kind}] ${e.text}`)
       .join("\n");
-    return [
+    const lines = [
       `■ 現在の状態`,
       describeStateForAI(s.room),
       ``,
@@ -84,7 +87,20 @@ export class Session {
       ``,
       `■ 最近の出来事`,
       recent,
-    ].join("\n");
+    ];
+    if (s.room.escaped) {
+      lines.push(``);
+      if (s.room.celebrated) {
+        lines.push(`■ お祝い`, `お祝いは送信済みです。`);
+      } else {
+        lines.push(
+          `■ 脱出後のお祝い`,
+          `プレイヤーは脱出に成功しました。画面には脱出キーワード「${s.room.clearWord}」が表示されています。`,
+          `プレイヤーがあなたに「${s.room.clearWord}」と言ったら、それがお祝いの合図です。celebrate ツール（curl の場合は POST /ai/celebrate に {"word":"${s.room.clearWord}","text":"お祝いの言葉"}）でお祝いを届けてください。お祝いは一度だけ届けられます。`
+        );
+      }
+    }
+    return lines.join("\n");
   }
 
   async fetch(req) {
@@ -137,6 +153,15 @@ export class Session {
       const text = String(body.text ?? "").trim();
       if (!text) return json({ error: "text is required" }, 400);
       this.pushEvent("ai", text);
+      await this.save();
+      return json({ ok: true, seq: s.seq });
+    }
+
+    if (sub === "/ai/celebrate" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const r = applyCelebrate(s.room, body.word, body.text);
+      if (!r.ok) return json({ ok: false, reason: r.reason }, 400);
+      this.pushEvent("celebration", r.message);
       await this.save();
       return json({ ok: true, seq: s.seq });
     }
@@ -211,6 +236,16 @@ export default {
           body: JSON.stringify({ text }),
         });
         return r.ok;
+      },
+      celebrate: async (word, text) => {
+        const r = await stub.fetch("https://session/ai/celebrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word, text }),
+        });
+        if (r.ok) return { ok: true };
+        const d = await r.json().catch(() => ({}));
+        return { ok: false, reason: d.reason ?? "お祝いを届けられませんでした。" };
       },
     });
     const runMcp = async (resolve) => {

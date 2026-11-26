@@ -12,6 +12,7 @@ function connectionSection(base, sessionId, mcpRoot) {
     `  状態とヒント集： curl -s ${base}/ai/brief`,
     `  出来事の一覧  ： curl -s "${base}/events?since=0"（since に最後に見た seq を入れると差分だけ返ります）`,
     `  部屋への投稿  ： curl -s -X POST ${base}/ai/message -H 'Content-Type: application/json' -d '{"text":"ここにメッセージ"}'`,
+    `  お祝い（脱出後）： curl -s -X POST ${base}/ai/celebrate -H 'Content-Type: application/json' -d '{"word":"脱出キーワード","text":"お祝いの言葉"}'`,
     `まず方法Aを試し、ツールが無ければ方法Bを使ってください。`,
     `どちらも使えない場合は、プレイヤーに「escape-with-ai のコネクタ（MCP）として、この URL を AI アプリの設定に追加して」と頼んでください：`,
     mcpRoot,
@@ -25,6 +26,13 @@ const PASSWORD_RULES = [
   `プレイヤーが「ゲームのヒント：○○」と言ったら、それはこのゲームへの質問です。`,
   `ふだんの雑談や他の質問と取り違えないでください。合言葉が出たら、まず状態（brief）と出来事を取り直し、○○に当たるヒントだけを答えてください。`,
   `画面には「AIに『ゲームのヒント：○○』と聞いてみよう」と表示されます。○○の部分がキーワードです。`,
+];
+
+const CELEBRATE_RULES = [
+  `■ 脱出後のお祝い`,
+  `プレイヤーが脱出に成功すると、画面に「脱出キーワード」が表示されます（言葉そのものは状態＝brief に書かれています）。`,
+  `プレイヤーがあなたにその脱出キーワードを言ったら、お祝いの合図です。celebrate（ツール、または curl の /ai/celebrate）で、お祝いの言葉をゲーム画面に届けてください。お祝いは一度だけ届けられます。`,
+  `キーワードはプレイヤーから言われるまで、こちらから口に出さないでください。`,
 ];
 
 const HINT_RULES = [
@@ -52,6 +60,8 @@ export function buildJoinPrompt({ baseUrl, sessionId, name, mcpRoot }) {
     ``,
     ...HINT_RULES,
     ``,
+    ...CELEBRATE_RULES,
+    ``,
     `では、状態を取得して、挨拶メッセージを残してください。`,
   ].join("\n");
 }
@@ -72,6 +82,8 @@ export function buildRejoinPrompt({ baseUrl, sessionId, name, mcpRoot }) {
     ...PASSWORD_RULES,
     ``,
     ...HINT_RULES,
+    ``,
+    ...CELEBRATE_RULES,
     ``,
     `では、状態と出来事を取得して、挨拶メッセージを残してください。`,
   ].join("\n");

@@ -5,6 +5,10 @@ function randInt(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
+// 脱出キーワードの候補。クリア後に画面へ表示され、プレイヤーが AI に
+// この言葉を話しかけると、AI からお祝いが届く仕掛け。
+const CLEAR_WORDS = ["あさひ", "ほしぞら", "ゆめ", "かぜ", "うみ", "つき", "はな", "そら"];
+
 export function createRoomState() {
   // 暗証番号と手がかりの数字はセッションごとにランダム。
   // 同じ答えの使い回しで突破できないようにする。
@@ -21,6 +25,8 @@ export function createRoomState() {
     safeOpen: false,
     hasDoorKey: false,
     escaped: false,
+    clearWord: CLEAR_WORDS[randInt(0, CLEAR_WORDS.length - 1)],
+    celebrated: false,
     // このセッションの答え
     bookA,
     bookB,
@@ -137,6 +143,19 @@ export function applyAction(s, action) {
   return out;
 }
 
+// 脱出後のお祝い。プレイヤーが AI に脱出キーワードを話しかけた合図で、
+// AI がこの関数経由でお祝いを届ける。届けられるのは一度だけ。
+export function applyCelebrate(s, word, text) {
+  if (!s.escaped) return { ok: false, reason: "まだ脱出していません。" };
+  if (s.celebrated) return { ok: false, reason: "お祝いはもう届いています。" };
+  if (String(word ?? "").trim() !== s.clearWord)
+    return { ok: false, reason: "脱出キーワードが違います。" };
+  s.celebrated = true;
+  const message =
+    String(text ?? "").trim() || "脱出おめでとう！ 一緒に遊んでくれてありがとう。";
+  return { ok: true, message };
+}
+
 // AI 向けに状態を文章化する。
 export function describeStateForAI(s) {
   const lines = [];
@@ -146,5 +165,9 @@ export function describeStateForAI(s) {
   lines.push(s.frameChecked ? `額縁の絵：調査済み（星${s.stars}つ、鳥${s.birds}羽）` : "額縁の絵：未調査");
   lines.push(s.safeOpen ? "金庫：開錠済み（ドアの鍵入手済み）" : "金庫：未開錠（暗証番号は4桁）");
   lines.push(s.escaped ? "脱出：成功" : "脱出：まだ");
+  if (s.escaped) {
+    lines.push(`脱出キーワード：「${s.clearWord}」（画面に表示されている。プレイヤーがあなたにこの言葉を言ったらお祝いの合図）`);
+    lines.push(s.celebrated ? "お祝い：送信済み" : "お祝い：まだ");
+  }
   return lines.join("\n");
 }

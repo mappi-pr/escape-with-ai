@@ -13,6 +13,7 @@ import {
   spotViews,
   inventory,
   applyAction,
+  applyCelebrate,
   describeStateForAI,
   HINTS,
 } from "./room.mjs";
@@ -59,6 +60,8 @@ function guiState(s) {
     inventory: inventory(s.room),
     keywords: visibleKeywords(s.room),
     escaped: s.room.escaped,
+    clearWord: s.room.escaped ? s.room.clearWord : null,
+    celebrated: s.room.celebrated,
     lastSeq: s.seq,
   };
 }
@@ -71,7 +74,7 @@ function aiBrief(s) {
     .slice(-10)
     .map((e) => `#${e.seq} [${e.kind}] ${e.text}`)
     .join("\n");
-  return [
+  const lines = [
     `■ 現在の状態`,
     describeStateForAI(s.room),
     ``,
@@ -83,7 +86,20 @@ function aiBrief(s) {
     ``,
     `■ 最近の出来事`,
     recent,
-  ].join("\n");
+  ];
+  if (s.room.escaped) {
+    lines.push(``);
+    if (s.room.celebrated) {
+      lines.push(`■ お祝い`, `お祝いは送信済みです。`);
+    } else {
+      lines.push(
+        `■ 脱出後のお祝い`,
+        `プレイヤーは脱出に成功しました。画面には脱出キーワード「${s.room.clearWord}」が表示されています。`,
+        `プレイヤーがあなたに「${s.room.clearWord}」と言ったら、それがお祝いの合図です。celebrate ツール（curl の場合は POST /ai/celebrate に {"word":"${s.room.clearWord}","text":"お祝いの言葉"}）でお祝いを届けてください。お祝いは一度だけ届けられます。`
+      );
+    }
+  }
+  return lines.join("\n");
 }
 
 const MIME = {
@@ -172,6 +188,14 @@ const server = createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, seq: s.seq });
     }
 
+    if (sub === "/ai/celebrate" && req.method === "POST") {
+      const body = await readJson(req);
+      const r = applyCelebrate(s.room, body.word, body.text);
+      if (!r.ok) return sendJson(res, 400, { ok: false, reason: r.reason });
+      pushEvent(s, "celebration", r.message);
+      return sendJson(res, 200, { ok: true, seq: s.seq });
+    }
+
     return sendJson(res, 404, { error: "unknown endpoint" });
   }
 
@@ -186,6 +210,11 @@ const server = createServer(async (req, res) => {
     postMessage: async (text) => {
       pushEvent(s, "ai", text);
       return true;
+    },
+    celebrate: async (word, text) => {
+      const r = applyCelebrate(s.room, word, text);
+      if (r.ok) pushEvent(s, "celebration", r.message);
+      return r;
     },
   });
   const runMcp = async (req, res, resolve) => {

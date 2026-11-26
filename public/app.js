@@ -113,6 +113,7 @@ async function fetchEvents() {
 function appendLog(ev, isNewest) {
   const li = document.createElement("li");
   if (ev.kind === "ai") li.className = "ai";
+  if (ev.kind === "celebration") li.className = "celebration";
   if (isNewest) li.classList.add("new");
   li.textContent = ev.text;
   $("log").prepend(li);
@@ -121,6 +122,14 @@ function appendLog(ev, isNewest) {
 function render(state) {
   $("player-line").textContent = `プレイヤー：${state.name}`;
   $("escaped-banner").hidden = !state.escaped;
+  if (state.escaped && state.clearWord) {
+    $("clear-word-line").textContent = state.celebrated
+      ? ""
+      : `脱出キーワードは「${state.clearWord}」。AIにこの言葉を話しかけてみよう。`;
+    $("celebrated-line").textContent = state.celebrated
+      ? "🎉 AIからお祝いが届いたよ"
+      : "";
+  }
 
   const stage = $("spots");
   stage.innerHTML = "";
