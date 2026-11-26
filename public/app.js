@@ -58,6 +58,20 @@ $("go-room-btn").addEventListener("click", () => {
   startPolling();
 });
 
+$("rejoin-btn").addEventListener("click", async () => {
+  if (!sessionId) return;
+  const res = await fetch(`/api/sessions/${sessionId}/rejoin-prompt`);
+  if (!res.ok) return;
+  const data = await res.json();
+  try {
+    await navigator.clipboard.writeText(data.prompt);
+    $("rejoin-btn").textContent = "コピーしました";
+    setTimeout(() => ($("rejoin-btn").textContent = "再参加プロンプトをコピー"), 2500);
+  } catch {
+    /* コピーできない環境では何もしない */
+  }
+});
+
 async function fetchState() {
   const res = await fetch(`/api/sessions/${sessionId}/state`);
   if (!res.ok) return null;

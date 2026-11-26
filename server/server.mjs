@@ -16,7 +16,7 @@ import {
   describeStateForAI,
   HINTS,
 } from "./room.mjs";
-import { buildJoinPrompt } from "./prompt.mjs";
+import { buildJoinPrompt, buildRejoinPrompt } from "./prompt.mjs";
 
 const PORT = process.env.PORT ?? 8787;
 const PUBLIC_DIR = fileURLToPath(new URL("../public/", import.meta.url));
@@ -129,6 +129,11 @@ const server = createServer(async (req, res) => {
     const sub = m[2] ?? "";
 
     if (sub === "/state" && req.method === "GET") return sendJson(res, 200, guiState(s));
+
+    if (sub === "/rejoin-prompt" && req.method === "GET") {
+      const prompt = buildRejoinPrompt({ baseUrl: publicBase(req), sessionId: s.id, name: s.name });
+      return sendJson(res, 200, { prompt });
+    }
 
     if (sub === "/events" && req.method === "GET") {
       const since = Number(url.searchParams.get("since") ?? 0);

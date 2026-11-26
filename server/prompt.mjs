@@ -1,5 +1,6 @@
 // セッション参加プロンプトの生成。
 // 参加画面に表示され、ユーザがコピーして自分の AI に貼ると、AI が curl でセッションに参加する。
+// 再参加用（buildRejoinPrompt）は、接続が切れた AI が途中から戻るためのもの。状態はサーバー側に残っている。
 
 export function buildJoinPrompt({ baseUrl, sessionId, name }) {
   const base = `${baseUrl}/api/sessions/${sessionId}`;
@@ -33,5 +34,32 @@ export function buildJoinPrompt({ baseUrl, sessionId, name }) {
     `- プレイヤーが詰まった様子なら、部屋に短い励ましや問いかけのメッセージを残すのは歓迎です。`,
     ``,
     `では、brief を取得して、挨拶メッセージを残してください。`,
+  ].join("\n");
+}
+
+export function buildRejoinPrompt({ baseUrl, sessionId, name }) {
+  const base = `${baseUrl}/api/sessions/${sessionId}`;
+  return [
+    `あなたは脱出ゲームの相方として「再参加」を招待されました。プレイヤーは「${name}」さんです。`,
+    `接続が切れてしまったための途中参加です。ゲームの状態はサーバーに残っているので、最初からにはなりません。`,
+    `あなたは画面（GUI）を見られません。代わりに、curl でゲームの状態を読み、部屋にメッセージを残せます。`,
+    ``,
+    `■ まず状況を把握すること`,
+    `curl -s ${base}/ai/brief で現在の状態とヒント集を、`,
+    `curl -s "${base}/events?since=0" でこれまでの出来事を全部受け取ってください。`,
+    ``,
+    `■ 部屋にメッセージを残す（画面に表示されます）`,
+    `curl -s -X POST ${base}/ai/message -H 'Content-Type: application/json' -d '{"text":"ここにメッセージ"}'`,
+    `まず「戻ってきたよ」の挨拶を1つ残してください。長い説明は要りません。`,
+    ``,
+    `■ 合言葉（大事）`,
+    `プレイヤーが「ゲームのヒント：○○」と言ったら、それはこのゲームへの質問です。`,
+    `ふだんの雑談や他の質問と取り違えないでください。合言葉が出たら、まず brief を取り直し、○○に当たるヒントだけを答えてください。`,
+    ``,
+    `■ ヒントの約束`,
+    `- ヒントは、合言葉で尋ねられたキーワードの範囲だけ答えてください。聞かれていない謎の答えを先回りして言わないでください。`,
+    `- brief のヒント集があなたの持っている知識です。それ以外の「答え」は知らないものとして振る舞ってください。`,
+    ``,
+    `では、brief と events を取得して、挨拶メッセージを残してください。`,
   ].join("\n");
 }

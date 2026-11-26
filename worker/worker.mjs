@@ -12,7 +12,7 @@ import {
   describeStateForAI,
   HINTS,
 } from "../server/room.mjs";
-import { buildJoinPrompt } from "../server/prompt.mjs";
+import { buildJoinPrompt, buildRejoinPrompt } from "../server/prompt.mjs";
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj, null, 2), {
@@ -166,6 +166,16 @@ export default {
 
     const m = path.match(/^\/api\/sessions\/([a-f0-9]+)(\/.*)?$/);
     if (m) {
+      // 再参加プロンプトは Worker 側で生成する（公開オリジンが必要なため）。
+      // セッションの存在確認と名前の取得だけ DO に聞く。
+      if ((m[2] ?? "") === "/rejoin-prompt" && req.method === "GET") {
+        const stub = env.SESSION.getByName(m[1]);
+        const stateRes = await stub.fetch("https://session/state");
+        if (!stateRes.ok) return json({ error: "session not found" }, 404);
+        const st = await stateRes.json();
+        const prompt = buildRejoinPrompt({ baseUrl: url.origin, sessionId: m[1], name: st.name });
+        return json({ prompt });
+      }
       const stub = env.SESSION.getByName(m[1]);
       const sub = m[2] ?? "/";
       const forward = new Request(`https://session${sub}${url.search}`, req);
